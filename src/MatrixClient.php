@@ -227,11 +227,11 @@ class MatrixClient {
      * @throws \MatrixPhp\Exceptions\MatrixRequestException
      */
     protected function finalizeLogin(array $response, bool $sync, int $limit): string {
-        $this->userId = array_get($response, 'user_id');
-        $this->token = array_get($response, 'access_token');
-        $this->hs = array_get($response, 'home_server');
+        $this->userId = $response['user_id'];
+        $this->token = $response['access_token'];
+        $this->hs = $response['home_server'];
         $this->api->setToken($this->token);
-        $this->deviceId = array_get($response, 'device_id');
+        $this->deviceId = $response['device_id'];
 
         if ($this->encryption) {
             $this->olmDevice = new OlmDevice($this->api, $this->userId, $this->deviceId, $this->encryptionConf);
@@ -268,7 +268,7 @@ class MatrixClient {
      * @return Room
      * @throws Exceptions\MatrixException
      */
-    public function createRoom(?string $alias = null, bool $isPublic = false, array $invitees = []): Room {
+    public function createRoom(?string $alias = null, bool $isPublic = false, array $invitees = [], bool $isSpace = false ): Room {
         $response = $this->api->createRoom($alias, null, $isPublic, $invitees);
 
         return $this->mkRoom($response['room_id']);
@@ -487,20 +487,21 @@ class MatrixClient {
      * @throws MatrixRequestException
      */
     public function sync(int $timeoutMs = 30000) {
-        $response = $this->api->sync($this->syncToken, $timeoutMs, $this->syncFilter);
+        $response = collect($this->api->sync($this->syncToken, $timeoutMs, $this->syncFilter));
         $this->syncToken = $response['next_batch'];
 
-        foreach (array_get($response, 'presence.events', []) as $presenceUpdate) {
+        foreach ((array)collect($response->get('presence'))->get('events') as $presenceUpdate) {
             foreach ($this->presenceListeners as $cb) {
                 $cb($presenceUpdate);
             }
         }
-        foreach (array_get($response, 'rooms.invite', []) as $roomId => $inviteRoom) {
+
+        foreach ((array)collect($response->get('rooms'))->get('invite') as $roomId => $inviteRoom) {
             foreach ($this->inviteListeners as $cb) {
                 $cb($roomId, $inviteRoom['invite_state']);
             }
         }
-        foreach (array_get($response, 'rooms.leave', []) as $roomId => $leftRoom) {
+        foreach ((array)collect($response->get('rooms'))->get('leave') as $roomId => $leftRoom) {
             foreach ($this->leftListeners as $cb) {
                 $cb($roomId, $leftRoom);
             }
@@ -511,7 +512,7 @@ class MatrixClient {
         if ($this->encryption && array_key_exists('device_one_time_keys_count', $response)) {
             $this->olmDevice->updateOneTimeKeysCounts($response['device_one_time_keys_count']);
         }
-        foreach (array_get($response, 'rooms.join', []) as $roomId => $syncRoom) {
+        foreach ((array)collect($response->get('rooms'))->get('join') as $roomId => $syncRoom) {
             if (!empty($inviteRoom)) {
                 foreach ($this->inviteListeners as $cb) {
                     $cb($roomId, $inviteRoom['invite_state']);
@@ -523,11 +524,11 @@ class MatrixClient {
             $room = $this->rooms[$roomId];
             // TODO: the rest of this for loop should be in room object method
             $room->prevBatch = $syncRoom["timeline"]["prev_batch"];
-            foreach (array_get($syncRoom, "state.events", []) as $event) {
+            foreach ((array)collect($response->get('state'))->get('events') as $event) {
                 $event['room_id'] = $roomId;
                 $room->processStateEvent($event);
             }
-            foreach (array_get($syncRoom, "timeline.events", []) as $event) {
+            foreach ((array)collect($response->get('timeline'))->get('events') as $event) {
                 $event['room_id'] = $roomId;
                 $room->putEvent($event);
 
@@ -541,7 +542,7 @@ class MatrixClient {
                     }
                 }
             }
-            foreach (array_get($syncRoom, "ephemeral.events", []) as $event) {
+            foreach ((array)collect($response->get('ephemeral'))->get('events') as $event) {
                 $event['room_id'] = $roomId;
                 $room->putEphemeralEvent($event);
 

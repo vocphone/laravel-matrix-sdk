@@ -89,7 +89,8 @@ class MatrixHttpApi {
             throw new MatrixException("Invalid homeserver url $baseUrl");
         }
 
-        if (!array_get(parse_url($baseUrl), 'scheme')) {
+        $urlParts = parse_url($baseUrl);
+        if (empty($urlParts['scheme'])) {
             throw new MatrixException("No scheme in homeserver url $baseUrl");
         }
         $this->baseUrl = $baseUrl;
@@ -235,7 +236,7 @@ class MatrixHttpApi {
      * @throws MatrixException
      */
     public function createRoom(string $alias = null, string $name = null, bool $isPublic = false,
-                               array $invitees = null, bool $federate = null) {
+                               array $invitees = null, bool $federate = null, array $additionOptions = null ) {
         $content = [
             "visibility" => $isPublic ? "public" : "private"
         ];
@@ -250,6 +251,9 @@ class MatrixHttpApi {
         }
         if ($federate != null) {
             $content["creation_content"] = ['m.federate' => $federate];
+        }
+        if( !empty($additionOptions)) {
+            $content = array_merge($content, $additionOptions);
         }
         return $this->send("POST", "/createRoom", $content);
     }
@@ -961,8 +965,14 @@ class MatrixHttpApi {
             }
 
             $jsonResponse = json_decode($responseBody, true);
-            $waitTime = array_get($jsonResponse, 'retry_after_ms');
-            $waitTime = $waitTime ?: array_get($jsonResponse, 'error.retry_after_ms', $this->default429WaitMs);
+            if( !empty($jsonResponse['retry_after_ms'])) {
+                $waitTime = $jsonResponse['retry_after_ms'];
+            }else if( !empty($jsonResponse['error']) && !empty($jsonResponse['error']['retry_after_ms'])) {
+                $waitTime = $jsonResponse['error']['retry_after_ms'];
+            } else {
+                $waitTime = $this->default429WaitMs;
+            }
+
             $waitTime /= 1000;
             sleep($waitTime);
         }

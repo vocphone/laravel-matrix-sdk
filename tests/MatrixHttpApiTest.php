@@ -535,6 +535,25 @@ class MatrixHttpApiTest extends BaseTestCase {
         ];
     }
 
+    public function testCreateRoomSpace() {
+        $createRoomUrl = "http://example.com/_matrix/client/r0/createRoom";
+        $container = [];
+        $r = '{"room_id": "!TkPhMKEjaKOYStOxXY:example.com"}';
+        $handler = $this->getMockClientHandler([new Response(200, [], $r)], $container);
+        $this->api->setClient(new Client(['handler' => $handler]));
+
+        $this->api->createRoom("#test:example.com", 'test', false, [], null, [  'creation_content' => [
+                'type' => 'm.space',
+            ]]);
+        /** @var Request $req */
+        $req = array_get($container, '0.request');
+
+        $this->assertEquals('POST', $req->getMethod());
+        $this->assertEquals($createRoomUrl, (string)$req->getUri());
+        $body = json_decode($req->getBody()->getContents(), true);
+        $this->assertEquals("m.space", $body['creation_content']['type']);
+    }
+
     ///////////////////////////
     // class TestRoomApi
     ///////////////////////////
