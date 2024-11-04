@@ -1,5 +1,5 @@
 {
-    "name": "meet-kinksters/php-matrix-sdk",
+    "name": "vocphone/laravel-matrix-sdk",
     "type": "library",
     "description": "PHP SDK for interacting with Matrix/Synapse.",
     "keywords": [
@@ -8,7 +8,7 @@
         "Synapse",
         "PHP"
     ],
-    "homepage": "https://github.com/meet-kinksters/php-matrix-sdk",
+    "homepage": "https://github.com/vocphones/laravel-matrix-sdk",
     "license": "MIT",
     "authors": [
         {
@@ -21,6 +21,12 @@
             "name": "Brad Jones",
             "email": "brad@kinksters.dating",
             "homepage": "https://github.com/bradjones1",
+            "role": "Developer"
+        },
+        {
+            "name": "Tom Higgins",
+            "email": "support@vocphone.com",
+            "homepage": "https://github.com/vocphone",
             "role": "Developer"
         }
     ],
