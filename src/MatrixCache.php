@@ -10,7 +10,7 @@ namespace MatrixPhp;
  *      User, Room, etc. classes at all.
  * @package MatrixPhp
  */
-class Cache {
+class MatrixCache {
     const NONE = -1;
     const SOME = 0;
     const ALL = 1;
