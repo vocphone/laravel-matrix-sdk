@@ -7,6 +7,7 @@ use MatrixPhp\Exceptions\MatrixRequestException;
 use MatrixPhp\Exceptions\MatrixUnexpectedResponse;
 use MatrixPhp\Exceptions\ValidationException;
 use phpDocumentor\Reflection\Types\Callable_;
+use Illuminate\Support\Facades\Cache;
 
 //TODO: port OLM bindings
 define('ENCRYPTION_SUPPORT', false);
@@ -112,7 +113,7 @@ class MatrixClient {
         ?string $token = null,
         bool $validCertCheck = true,
         int $syncFilterLimit = 20,
-        int $cacheLevel = Cache::ALL,
+        int $cacheLevel = MatrixCache::ALL,
         $encryption = false,
         protected $encryptionConf = [],
     ) {
@@ -124,8 +125,8 @@ class MatrixClient {
         $this->api = new MatrixHttpApi($baseUrl, $token);
         $this->api->validateCertificate($validCertCheck);
         $this->encryption = $encryption;
-        if (!in_array($cacheLevel, Cache::$levels)) {
-            throw new ValidationException('$cacheLevel must be one of Cache::NONE, Cache::SOME, Cache::ALL');
+        if (!in_array($cacheLevel, MatrixCache::$levels)) {
+            throw new ValidationException('$cacheLevel must be one of MatrixCache.php::NONE, MatrixCache.php::SOME, MatrixCache.php::ALL');
         }
         $this->cacheLevel = $cacheLevel;
         $this->syncFilter = sprintf('{ "room": { "timeline" : { "limit" : %d } } }', $syncFilterLimit);
@@ -133,6 +134,10 @@ class MatrixClient {
             $response = $this->api->whoami();
             $this->userId = $response['user_id'];
             $this->sync();
+        } else {
+            if( Cache::has("LARAVEL_MATRIX_TOKEN") ) {
+                $this->token = Cache::get("LARAVEL_MATRIX_TOKEN");
+            }
         }
     }
 
@@ -176,7 +181,7 @@ class MatrixClient {
     }
 
     public function login(string $username, string $password, bool $sync = true,
-                          int $limit = 10, ?string $deviceId = null): ?string {
+                          int $limit = 10, ?string $deviceId = null, bool $cacheToken = true ): ?string {
         $response = $this->api->login('m.login.password', [
             'identifier' => [
                 'type' => 'm.id.user',
@@ -187,7 +192,7 @@ class MatrixClient {
             'device_id' => $deviceId
         ]);
 
-        return $this->finalizeLogin($response, $sync, $limit);
+        return $this->finalizeLogin($response, $sync, $limit, $cacheToken);
     }
 
     /**
@@ -226,12 +231,15 @@ class MatrixClient {
      * @throws \MatrixPhp\Exceptions\MatrixException
      * @throws \MatrixPhp\Exceptions\MatrixRequestException
      */
-    protected function finalizeLogin(array $response, bool $sync, int $limit): string {
-        $this->userId = array_get($response, 'user_id');
-        $this->token = array_get($response, 'access_token');
-        $this->hs = array_get($response, 'home_server');
+    protected function finalizeLogin(array $response, bool $sync, int $limit, bool $cacheToken = true): string {
+        $this->userId = $response['user_id'];
+        $this->token = $response['access_token'];
+        $this->hs = $response['home_server'];
         $this->api->setToken($this->token);
-        $this->deviceId = array_get($response, 'device_id');
+        $this->deviceId = $response['device_id'];
+        if( $cacheToken && !empty($this->token) ) {
+            Cache::put("LARAVEL_MATRIX_TOKEN", $this->token);
+        }
 
         if ($this->encryption) {
             $this->olmDevice = new OlmDevice($this->api, $this->userId, $this->deviceId, $this->encryptionConf);
@@ -255,6 +263,9 @@ class MatrixClient {
     public function logout() {
         $this->stopListenerThread();
         $this->api->logout();
+         if( Cache::has("LARAVEL_MATRIX_TOKEN") ) {
+            Cache::forget("LARAVEL_MATRIX_TOKEN");
+        }
     }
 
     /**
@@ -268,8 +279,21 @@ class MatrixClient {
      * @return Room
      * @throws Exceptions\MatrixException
      */
-    public function createRoom(?string $alias = null, bool $isPublic = false, array $invitees = []): Room {
-        $response = $this->api->createRoom($alias, null, $isPublic, $invitees);
+    public function createRoom(?string $alias = null, bool $isPublic = false, array $invitees = [], bool $isSpace = false ): Room {
+        $additionalOptions = null;
+        $name = null;
+        if( $isSpace ) {
+            $additionalOptions = [
+                'creation_content' => [
+                    'type' => 'm.space'
+                ],
+            ];
+            $name = $alias;
+            $alias = null;
+
+
+        }
+        $response = $this->api->createRoom($alias, $name, $isPublic, $invitees, null, $additionalOptions);
 
         return $this->mkRoom($response['room_id']);
     }
@@ -487,20 +511,21 @@ class MatrixClient {
      * @throws MatrixRequestException
      */
     public function sync(int $timeoutMs = 30000) {
-        $response = $this->api->sync($this->syncToken, $timeoutMs, $this->syncFilter);
+        $response = collect($this->api->sync($this->syncToken, $timeoutMs, $this->syncFilter));
         $this->syncToken = $response['next_batch'];
 
-        foreach (array_get($response, 'presence.events', []) as $presenceUpdate) {
+        foreach ((array)collect($response->get('presence'))->get('events') as $presenceUpdate) {
             foreach ($this->presenceListeners as $cb) {
                 $cb($presenceUpdate);
             }
         }
-        foreach (array_get($response, 'rooms.invite', []) as $roomId => $inviteRoom) {
+
+        foreach ((array)collect($response->get('rooms'))->get('invite') as $roomId => $inviteRoom) {
             foreach ($this->inviteListeners as $cb) {
                 $cb($roomId, $inviteRoom['invite_state']);
             }
         }
-        foreach (array_get($response, 'rooms.leave', []) as $roomId => $leftRoom) {
+        foreach ((array)collect($response->get('rooms'))->get('leave') as $roomId => $leftRoom) {
             foreach ($this->leftListeners as $cb) {
                 $cb($roomId, $leftRoom);
             }
@@ -511,7 +536,7 @@ class MatrixClient {
         if ($this->encryption && array_key_exists('device_one_time_keys_count', $response)) {
             $this->olmDevice->updateOneTimeKeysCounts($response['device_one_time_keys_count']);
         }
-        foreach (array_get($response, 'rooms.join', []) as $roomId => $syncRoom) {
+        foreach ((array)collect($response->get('rooms'))->get('join') as $roomId => $syncRoom) {
             if (!empty($inviteRoom)) {
                 foreach ($this->inviteListeners as $cb) {
                     $cb($roomId, $inviteRoom['invite_state']);
@@ -523,11 +548,11 @@ class MatrixClient {
             $room = $this->rooms[$roomId];
             // TODO: the rest of this for loop should be in room object method
             $room->prevBatch = $syncRoom["timeline"]["prev_batch"];
-            foreach (array_get($syncRoom, "state.events", []) as $event) {
+            foreach ((array)collect($response->get('state'))->get('events') as $event) {
                 $event['room_id'] = $roomId;
                 $room->processStateEvent($event);
             }
-            foreach (array_get($syncRoom, "timeline.events", []) as $event) {
+            foreach ((array)collect($response->get('timeline'))->get('events') as $event) {
                 $event['room_id'] = $roomId;
                 $room->putEvent($event);
 
@@ -541,7 +566,7 @@ class MatrixClient {
                     }
                 }
             }
-            foreach (array_get($syncRoom, "ephemeral.events", []) as $event) {
+            foreach ((array)collect($response->get('ephemeral'))->get('events') as $event) {
                 $event['room_id'] = $roomId;
                 $room->putEphemeralEvent($event);
 

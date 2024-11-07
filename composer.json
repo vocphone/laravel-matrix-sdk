@@ -1,5 +1,5 @@
 {
-    "name": "meet-kinksters/php-matrix-sdk",
+    "name": "vocphone/laravel-matrix-sdk",
     "type": "library",
     "description": "PHP SDK for interacting with Matrix/Synapse.",
     "keywords": [
@@ -8,7 +8,7 @@
         "Synapse",
         "PHP"
     ],
-    "homepage": "https://github.com/meet-kinksters/php-matrix-sdk",
+    "homepage": "https://github.com/vocphones/laravel-matrix-sdk",
     "license": "MIT",
     "authors": [
         {
@@ -22,6 +22,12 @@
             "email": "brad@kinksters.dating",
             "homepage": "https://github.com/bradjones1",
             "role": "Developer"
+        },
+        {
+            "name": "Tom Higgins",
+            "email": "support@vocphone.com",
+            "homepage": "https://github.com/vocphone",
+            "role": "Developer"
         }
     ],
     "replace": {
@@ -30,9 +36,10 @@
     },
     "require": {
         "php": "~7.4|^8",
+        "ext-json": "*",
         "guzzlehttp/guzzle": "^6.3|^7",
-        "rappasoft/laravel-helpers": "^1.0",
-        "ext-json": "*"
+        "illuminate/collections": "^10.48",
+        "laravel/helpers": "^1.7"
     },
     "require-dev": {
         "phpunit/phpunit" : ">=5.4.3"
