@@ -1,6 +1,6 @@
 <?php
 
-namespace MatrixPhp;
+namespace Vocphone\LaravelMatrixSdk;
 
 use MatrixPhp\Exceptions\MatrixException;
 use MatrixPhp\Exceptions\MatrixHttpLibException;
@@ -1468,5 +1468,22 @@ class MatrixHttpApi {
         $this->token = $token;
     }
 
+    /**
+     * get the heirarchy, not sure what's used for
+     *
+     * @param  string  $roomId
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function getHierarchy( string $roomId ): array {
+        $params = [
+            'suggested_only' => 'true',
+            'max_depth' => 1,
+        ];
+        $path = sprintf("/rooms/%s/hierarchy", urlencode($roomId));
+        return $this->send("GET", $path, null, $params, [], "/_matrix/client/v1");
+    }
 
 }

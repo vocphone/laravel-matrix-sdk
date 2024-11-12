@@ -1,6 +1,6 @@
 <?php
 
-namespace MatrixPhp;
+namespace Vocphone\LaravelMatrixSdk;
 
 use MatrixPhp\Exceptions\ValidationException;
 

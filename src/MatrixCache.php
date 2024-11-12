@@ -1,6 +1,6 @@
 <?php
 
-namespace MatrixPhp;
+namespace Vocphone\LaravelMatrixSdk;
 
 /**
  * Cache constants used when instantiating Matrix Client to specify level of caching

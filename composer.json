@@ -45,18 +45,23 @@
     },
     "autoload": {
         "psr-4": {
-            "MatrixPhp\\": "src"
+            "Vocphone\\LaravelMatrixSdk\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "MatrixPhp\\Tests\\": "tests"
+            "Vocphone\\LaravelMatrixSdk\\Tests\\": "tests"
         }
     },
     "scripts": {
         "test": "phpunit"
     },
     "extra": {
+        "laravel": {
+            "providers": [
+                "Vocphone\\LaravelMatrixSdk\\LaravelMatrixServiceProvider"
+            ]
+        },
         "branch-alias": {
             "dev-master": "1.0-dev"
         }

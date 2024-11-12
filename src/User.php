@@ -1,6 +1,6 @@
 <?php
 
-namespace MatrixPhp;
+namespace Vocphone\LaravelMatrixSdk;
 
 /**
  * The User class can be used to call user specific functions.

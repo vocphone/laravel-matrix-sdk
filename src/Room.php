@@ -1,6 +1,6 @@
 <?php
 
-namespace MatrixPhp;
+namespace Vocphone\LaravelMatrixSdk;
 
 use MatrixPhp\Exceptions\MatrixRequestException;
 use function GuzzleHttp\default_ca_bundle;
@@ -32,6 +32,8 @@ class Room {
     protected $inviteOnly = false;
     protected $guestAccess;
     public $prevBatch;
+    protected $isSpace = false;
+    protected $spaceId;
     protected $_members = [];
     protected $membersDisplaynames = [
         // $userId: $displayname,
@@ -400,8 +402,12 @@ class Room {
         if (count($this->events) > $this->eventHistoryLimit) {
             array_pop($this->events);
         }
-        if (array_key_exists('state_event', $event)) {
+        if (array_key_exists('state_key', $event)) {
+
             $this->processStateEvent($event);
+            if( !empty($event['state_key']) && empty($this->spaceId) && preg_match('/^\!([A-z0-9]+):/', $event['state_key'], $matches) ) {
+                $this->spaceId = $event['state_key'];
+            }
         }
         // Dispatch for room-specific listeners
         foreach ($this->listeners as $l) {
@@ -841,7 +847,7 @@ class Room {
         $clevel = $this->client->cacheLevel();
 
         // Don't keep track of room state if caching turned off
-        if ($clevel >= Cache::SOME) {
+        if ($clevel >= MatrixCache::SOME) {
             switch ($etype) {
                 case 'm.room.name':
                     $this->name = array_get($econtent, 'name');
@@ -851,6 +857,13 @@ class Room {
                     break;
                 case 'm.room.topic':
                     $this->topic = array_get($econtent, 'topic');
+                    break;
+                case 'm.room.create':
+                    $type = array_get($econtent, 'type');
+                    if( $type && $type == 'm.space' ) {
+                        $this->isSpace = true;
+                        $this->spaceId = $this->roomId;
+                    }
                     break;
                 case 'm.room.aliases':
                     $this->aliases = array_get($econtent, 'aliases');
@@ -866,7 +879,7 @@ class Room {
                     break;
                 case 'm.room.member':
                     // tracking room members can be large e.g. #matrix:matrix.org
-                    if ($clevel == Cache::ALL) {
+                    if ($clevel == MatrixCache::ALL) {
                         if ($econtent['membership'] == 'join') {
                             $userId = $stateEvent['state_key'];
                             $this->addMember($userId, array_get($econtent, 'displayname'));
@@ -893,5 +906,48 @@ class Room {
         return $this->client->api();
     }
 
+    /**
+     * get the isSpace bool for this room
+     * @return bool
+     */
+    public function getIsSpace()
+    {
+        return $this->isSpace;
+    }
+
+    /**
+     * get the name for this room
+     * @return mixed
+     */
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    /**
+     * get the spaceId of this room
+     * @return string
+     */
+    public function getSpaceId()
+    {
+        return $this->spaceId??'';
+    }
+
+    /**
+     * get the room id
+     * @return string
+     */
+    public function getRoomId()
+    {
+        return $this->roomId;
+    }
+
+    /**
+     * get all the child rooms
+     * @return array
+     */
+    public function getHierarchy(): array {
+        return $this->client->api()->getHierarchy( $this->roomId );
+    }
 
 }
