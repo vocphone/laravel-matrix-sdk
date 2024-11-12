@@ -115,7 +115,7 @@ class MatrixClient {
         int $syncFilterLimit = 20,
         int $cacheLevel = MatrixCache::ALL,
         $encryption = false,
-        protected $encryptionConf = [],
+        $encryptionConf = []
     ) {
 
         // @phpstan-ignore-next-line
@@ -123,6 +123,7 @@ class MatrixClient {
             throw new ValidationException('Failed to enable encryption. Please make sure the olm library is available.');
         }
         $doSync = true;
+
         if( !$token  ) {
             if( Cache::has("LARAVEL_MATRIX_TOKEN") ) {
                 $token = Cache::get("LARAVEL_MATRIX_TOKEN");
@@ -133,7 +134,6 @@ class MatrixClient {
 
             $doSync = false;
         }
-
         $this->setApi($baseUrl, $token, $validCertCheck);
         $this->encryption = $encryption;
         if (!in_array($cacheLevel, MatrixCache::$levels)) {
@@ -159,12 +159,13 @@ class MatrixClient {
      * @return void
      * @throws Exceptions\MatrixException
      */
-    private function setApi(string $baseUrl = null, string $token = null, bool $validCertCheck = true ) {
+    private function setApi(?string $baseUrl = null, ?string $token = null, bool $validCertCheck = true ) {
         if( !$baseUrl ) {
             $baseUrl = env("MATRIX_URL");
         }
-
+        
         if( !$this->api ) {
+
             $this->api = new MatrixHttpApi($baseUrl, $token);
             $this->api->validateCertificate($validCertCheck);
         }
@@ -215,6 +216,7 @@ class MatrixClient {
             $username = env('MATRIX_USERNAME');
             $password = env('MATRIX_PASSWORD');
         }
+
         $response = $this->api->login('m.login.password', [
             'identifier' => [
                 'type' => 'm.id.user',

@@ -8,18 +8,23 @@ namespace Vocphone\LaravelMatrixSdk\Exceptions;
  */
 class MatrixRequestException extends MatrixException {
 
-    public readonly ?string $errCode;
+    public string $errCode;
+    protected int $httpCode = 0;
+    protected string $content = '';
+
 
     public function __construct(
-        protected int $httpCode = 0,
-        protected string $content = '',
+        $httpCode = 0,
+        $content = ''
     ) {
+        $this->httpCode = $httpCode;
+        $this->content = $content;
         parent::__construct($content, $httpCode);
         try {
             $decoded = \json_decode($content, TRUE, 512, JSON_THROW_ON_ERROR);
             $this->errCode = $decoded['errcode'] ?? NULL;
         }
-        catch (\JsonException) {
+        catch (\JsonException $e ) {
             $this->errCode = NULL;
         }
     }
