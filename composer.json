@@ -59,7 +59,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Vocphone\\LaravelMatrixSdk\\LaravelMatrixServiceProvider"
+                "Vocphone\\LaravelMatrixSdk\\MatrixServiceProvider"
             ]
         },
         "branch-alias": {
