@@ -1,7 +1,6 @@
 <?php
 
-namespace MatrixPhp\Exceptions;
-
+namespace Vocphone\LaravelMatrixSdk\Exceptions;
 /**
  * The home server gave an unexpected response.
  *

@@ -1,7 +1,6 @@
 <?php
 
-namespace MatrixPhp\Exceptions;
-
+namespace Vocphone\LaravelMatrixSdk\Exceptions;
 /**
  * Simple exception to differentiate validation exception from other exceptions
  *

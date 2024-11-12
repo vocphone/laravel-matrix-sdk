@@ -2,11 +2,11 @@
 
 namespace Vocphone\LaravelMatrixSdk;
 
-use MatrixPhp\Exceptions\MatrixException;
-use MatrixPhp\Exceptions\MatrixHttpLibException;
-use MatrixPhp\Exceptions\MatrixRequestException;
-use MatrixPhp\Exceptions\MatrixUnexpectedResponse;
-use MatrixPhp\Exceptions\ValidationException;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixException;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixHttpLibException;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixRequestException;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixUnexpectedResponse;
+use Vocphone\LaravelMatrixSdk\Exceptions\ValidationException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\RequestOptions;
@@ -327,7 +327,7 @@ class MatrixHttpApi {
         if (!$txnId) {
             $txnId = $this->makeTxnId();
         }
-        $path = sprintf('/rooms/%u/send/%s/%u', $roomId, urlencode($eventType), $txnId);
+        $path = sprintf('/rooms/%s/send/%s/%u', urlencode($roomId), urlencode($eventType), $txnId);
         $params = [];
         if ($timestamp) {
             $params['ts'] = $timestamp;

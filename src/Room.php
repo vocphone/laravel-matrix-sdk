@@ -2,7 +2,7 @@
 
 namespace Vocphone\LaravelMatrixSdk;
 
-use MatrixPhp\Exceptions\MatrixRequestException;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixRequestException;
 use function GuzzleHttp\default_ca_bundle;
 use http\Exception;
 use phpDocumentor\Reflection\DocBlock\Tags\Param;

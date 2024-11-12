@@ -1,7 +1,6 @@
 <?php
 
-namespace MatrixPhp\Exceptions;
-
+namespace Vocphone\LaravelMatrixSdk\Exceptions;
 /**
  * The library used for http requests raised an exception.
  *

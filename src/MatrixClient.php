@@ -117,21 +117,24 @@ class MatrixClient {
         $encryption = false,
         protected $encryptionConf = [],
     ) {
-        \Log::Info("I'm a new client");
-        if( !$baseUrl ) {
-            $baseUrl = env("MATRIX_URL");
-        }
+
         // @phpstan-ignore-next-line
         if ($encryption && ENCRYPTION_SUPPORT) {
             throw new ValidationException('Failed to enable encryption. Please make sure the olm library is available.');
         }
         $doSync = true;
-        if( !$token && Cache::has("LARAVEL_MATRIX_TOKEN") ) {
-            $token = Cache::get("LARAVEL_MATRIX_TOKEN");
+        if( !$token  ) {
+            if( Cache::has("LARAVEL_MATRIX_TOKEN") ) {
+                $token = Cache::get("LARAVEL_MATRIX_TOKEN");
+            } else {
+                $this->setApi($baseUrl, $token, $validCertCheck);
+                $token = $this->login();
+            }
+
             $doSync = false;
         }
-        $this->api = new MatrixHttpApi($baseUrl, $token);
-        $this->api->validateCertificate($validCertCheck);
+
+        $this->setApi($baseUrl, $token, $validCertCheck);
         $this->encryption = $encryption;
         if (!in_array($cacheLevel, MatrixCache::$levels)) {
             throw new ValidationException('$cacheLevel must be one of MatrixCache.php::NONE, MatrixCache.php::SOME, MatrixCache.php::ALL');
@@ -140,10 +143,30 @@ class MatrixClient {
         $this->syncFilter = sprintf('{ "room": { "timeline" : { "limit" : %d } } }', $syncFilterLimit);
 
         if ($token) {
+            $this->token = $token;
             $response = $this->api->whoami();
             $this->userId = $response['user_id'];
             if( $doSync )
                 $this->sync();
+        }
+    }
+
+    /**
+     * sets or ignore the api to make sure we can access the matrix api property
+     * @param  string|null  $baseUrl
+     * @param  string|null  $token
+     * @param  bool         $validCertCheck
+     * @return void
+     * @throws Exceptions\MatrixException
+     */
+    private function setApi(string $baseUrl = null, string $token = null, bool $validCertCheck = true ) {
+        if( !$baseUrl ) {
+            $baseUrl = env("MATRIX_URL");
+        }
+
+        if( !$this->api ) {
+            $this->api = new MatrixHttpApi($baseUrl, $token);
+            $this->api->validateCertificate($validCertCheck);
         }
     }
 
@@ -512,6 +535,20 @@ class MatrixClient {
         $this->rooms[$roomId] = $room;
 
         return $room;
+    }
+
+    /**
+     * a simple send message to a room
+     * @param  string  $message html message content
+     * @param  string  $roomId
+     * @return array|string
+     * @throws Exceptions\MatrixException
+     * @throws Exceptions\MatrixHttpLibException
+     * @throws Exceptions\MatrixRequestException
+     */
+    public function sendMessage( string $message, string $roomId ) {
+        $room = $this->mkRoom($roomId);
+        return $room->sendHtml($message);
     }
 
     /**

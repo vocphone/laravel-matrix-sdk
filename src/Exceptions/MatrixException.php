@@ -1,6 +1,6 @@
 <?php
 
-namespace MatrixPhp\Exceptions;
+namespace Vocphone\LaravelMatrixSdk\Exceptions;
 
 /**
  * A generic Matrix error. Specific errors will subclass this.
