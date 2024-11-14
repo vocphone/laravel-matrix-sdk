@@ -262,13 +262,19 @@ class MatrixHttpApi {
      * Performs /join/$room_id
      *
      * @param string $roomIdOrAlias The room ID or room alias to join.
+     * @param string|null $user_id The user ID to add ( defaults to logged in user )
      * @return array|string
      * @throws MatrixException
      */
-    public function joinRoom(string $roomIdOrAlias) {
+    public function joinRoom(string $roomIdOrAlias, ?string $user_id = null ) {
         $path = sprintf("/join/%s", urlencode($roomIdOrAlias));
 
-        return $this->send('POST', $path);
+        $content = null;
+        if( $user_id ) {
+            $content = ['user_id' => $user_id];
+        }
+
+        return $this->send('POST', $path, $content);
     }
 
     /**
@@ -974,7 +980,9 @@ class MatrixHttpApi {
             }
 
             $waitTime /= 1000;
-            sleep($waitTime);
+            \Log::Info("[matrix] set wait time: $waitTime");
+            sleep((int)$waitTime);
+
         }
 
         if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {

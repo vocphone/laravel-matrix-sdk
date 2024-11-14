@@ -2,12 +2,12 @@
 
 namespace Vocphone\LaravelMatrixSdk;
 
-use MatrixPhp\Crypto\OlmDevice;
-use MatrixPhp\Exceptions\MatrixRequestException;
-use MatrixPhp\Exceptions\MatrixUnexpectedResponse;
-use MatrixPhp\Exceptions\ValidationException;
+use Vocphone\LaravelMatrixSdk\Crypto\OlmDevice;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixUnexpectedResponse;
+use Vocphone\LaravelMatrixSdk\Exceptions\ValidationException;
 use phpDocumentor\Reflection\Types\Callable_;
 use Illuminate\Support\Facades\Cache;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixRequestException;
 
 //TODO: port OLM bindings
 define('ENCRYPTION_SUPPORT', false);
@@ -126,15 +126,17 @@ class MatrixClient {
 
         if( !$token  ) {
             if( Cache::has("LARAVEL_MATRIX_TOKEN") ) {
-                $token = Cache::get("LARAVEL_MATRIX_TOKEN");
+                $useToken = Cache::get("LARAVEL_MATRIX_TOKEN");
             } else {
                 $this->setApi($baseUrl, $token, $validCertCheck);
-                $token = $this->login();
+                $useToken = $this->login();
             }
 
             $doSync = false;
+        } else {
+            $useToken = $token;
         }
-        $this->setApi($baseUrl, $token, $validCertCheck);
+        $this->setApi($baseUrl, $useToken, $validCertCheck);
         $this->encryption = $encryption;
         if (!in_array($cacheLevel, MatrixCache::$levels)) {
             throw new ValidationException('$cacheLevel must be one of MatrixCache.php::NONE, MatrixCache.php::SOME, MatrixCache.php::ALL');
@@ -142,10 +144,21 @@ class MatrixClient {
         $this->cacheLevel = $cacheLevel;
         $this->syncFilter = sprintf('{ "room": { "timeline" : { "limit" : %d } } }', $syncFilterLimit);
 
-        if ($token) {
-            $this->token = $token;
-            $response = $this->api->whoami();
-            $this->userId = $response['user_id'];
+        if ($useToken) {
+            $this->token = $useToken;
+
+            try {
+                $response = $this->api->whoami();
+                $this->userId = $response['user_id'];
+            } catch ( \Exception $e ) {
+                if( !$token  ) {
+                    \Log::Warning("[Matrix] original token {$useToken} failed: {$e->getMessage()} attempting to login using stored credentials for user ".env('MATRIX_USERNAME'));
+                    $this->token = $this->login();
+                    $response = $this->api->whoami();
+                } else {
+                    throw $e;
+                }
+            }
             if( $doSync )
                 $this->sync();
         }
