@@ -125,7 +125,7 @@ class MatrixClient {
         $doSync = true;
 
         if( !$token  ) {
-            if( Cache::has("LARAVEL_MATRIX_TOKEN") ) {
+            if( Cache::has("LARAVEL_MATRIX_TOKEN") && Cache::get("LARAVEL_MATRIX_USER") == env("MATRIX_USERNAME") ) {
                 $useToken = Cache::get("LARAVEL_MATRIX_TOKEN");
             } else {
                 $this->setApi($baseUrl, $token, $validCertCheck);
@@ -286,6 +286,7 @@ class MatrixClient {
         $this->api->setToken($this->token);
         $this->deviceId = $response['device_id'];
         if( $cacheToken && !empty($this->token) ) {
+            Cache::put("LARAVEL_MATRIX_USERNAME", env("MATRIX_USERNAME"));
             Cache::put("LARAVEL_MATRIX_TOKEN", $this->token);
         }
 
@@ -681,6 +682,10 @@ class MatrixClient {
 
     public function userId():?string {
         return $this->userId;
+    }
+
+    public function whoami() {
+        return $this->api->whoami();
     }
 
     public function cacheLevel() {
