@@ -1472,6 +1472,7 @@ class MatrixHttpApi {
         return $this->send('GET', '/account/whoami');
     }
 
+
     public function setToken(?string $token) {
         $this->token = $token;
     }
@@ -1494,4 +1495,20 @@ class MatrixHttpApi {
         return $this->send("GET", $path, null, $params, [], "/_matrix/client/v1");
     }
 
+    /**
+     * Make an existing user an admin user ( using the admin api )
+     *
+     * @param  string  $userId
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function makeUserAdmin( string $userId ): array {
+        $params = [
+            'admin' => true,
+        ];
+        $path = sprintf("/users/%s/admin", urlencode($userId));
+        return $this->send('PUT', $path, $params, [], "/_synapse/admin/v1");
+    }
 }
