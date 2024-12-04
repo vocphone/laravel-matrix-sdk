@@ -3,6 +3,8 @@
 namespace Vocphone\LaravelMatrixSdk;
 
 use Vocphone\LaravelMatrixSdk\Crypto\OlmDevice;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixException;
+use Vocphone\LaravelMatrixSdk\Exceptions\MatrixHttpLibException;
 use Vocphone\LaravelMatrixSdk\Exceptions\MatrixUnexpectedResponse;
 use Vocphone\LaravelMatrixSdk\Exceptions\ValidationException;
 use phpDocumentor\Reflection\Types\Callable_;
@@ -691,7 +693,59 @@ class MatrixClient {
     public function cacheLevel() {
         return $this->cacheLevel;
     }
+    /**
+     * Updates the user privileges in a space
+     * @param  string  $roomId
+     * @param  array   $userArray e.g. [ '@user' => power_level, '@user:domain.com' => 100, ... ] Further details on power levels can be found https://spec.matrix.org/v1.12/client-server-api/#mroompower_levels
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function setUsersRoomPrivileges( string $roomId, array $userArray ): array {
 
+        $permissions = $this->api->getPowerLevels($roomId);
+
+        foreach( $userArray as $userId => $powerLevel ) {
+            $permissions['users'][$userId] = $powerLevel;
+        }
+
+        return $this->api->setPowerLevels($roomId, $permissions);
+    }
+
+
+    /**
+     * make an array of User admins in a space, this only elevates users to admin, it does not demote any user
+     * @param  string    $roomId
+     * @param  array     $userIds
+     * @param  int|null  $powerLevel https://spec.matrix.org/v1.12/client-server-api/#mroompower_levels
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function setUsersRoomAdmin(string $roomId, array $userIds, ?int $powerLevel = 100 ): array {
+        $userArray = [];
+        foreach( (array) $userIds as $userId) {
+            $userArray[$userId] = $powerLevel;
+        }
+
+        return $this->setUsersRoomPrivileges($roomId, $userArray);
+    }
+
+    /**
+     * Make a User an admin in a space
+     * @param  string  $roomId
+     * @param  string  $userId
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function setUserRoomAdmin(string $roomId, string $userId): array {
+        $userIds = [ $userId ];
+        return $this->setUsersRoomAdmin($roomId, $userIds);
+    }
     /**
      * get the current access token
      * @return mixed

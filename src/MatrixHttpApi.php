@@ -1504,11 +1504,13 @@ class MatrixHttpApi {
      * @throws MatrixHttpLibException
      * @throws MatrixRequestException
      */
-    public function makeUserAdmin( string $userId ): array {
+    public function setUserAdmin( string $userId ): array {
         $params = [
             'admin' => true,
         ];
         $path = sprintf("/users/%s/admin", urlencode($userId));
         return $this->send('PUT', $path, $params, [], "/_synapse/admin/v1");
     }
+
+    
 }
