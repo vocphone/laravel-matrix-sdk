@@ -1504,11 +1504,59 @@ class MatrixHttpApi {
      * @throws MatrixHttpLibException
      * @throws MatrixRequestException
      */
-    public function makeUserAdmin( string $userId ): array {
+    public function setUserAdmin( string $userId ): array {
         $params = [
             'admin' => true,
         ];
         $path = sprintf("/users/%s/admin", urlencode($userId));
         return $this->send('PUT', $path, $params, [], "/_synapse/admin/v1");
     }
+
+    /**
+     * Updates the user privileges in a space
+     * @param  string  $spaceId
+     * @param  array   $userArray e.g. [ '@user' => power_level, '@user:domain.com' => 100, ... ] Further details on power levels can be found https://spec.matrix.org/v1.12/client-server-api/#mroompower_levels
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function setUsersSpacePrivileges( string $spaceId, array $userArray ): array {
+        $contents= [ 'users' => $userArray ];
+        $path = sprintf("/rooms/%s/state/m.room.power_levels", urlencode($spaceId));
+        return $this->send('PUT', $path, $contents, [], [], "/_matrix/client/v3");
+    }
+
+    /**
+     * make an array of User admins in a space
+     * @param  string    $spaceId
+     * @param  array     $userIds
+     * @param  int|null  $powerLevel https://spec.matrix.org/v1.12/client-server-api/#mroompower_levels
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function setUsersSpaceAdmin(string $spaceId, array $userIds, ?int $powerLevel = 100 ): array {
+        $userArray = [];
+        foreach( (array) $userIds as $userId) {
+            $userArray[] = [ $userId => $powerLevel ];
+        }
+        return $this->setUsersSpacePrivileges($spaceId, $userArray);
+    }
+
+    /**
+     * Make a User an admin in a space
+     * @param  string  $spaceId
+     * @param  string  $userId
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function setUserSpaceAdmin(string $spaceId, string $userId): array {
+        $userIds = [ $userId ];
+        return $this->setUsersSpaceAdmin($spaceId, $userIds);
+    }
+
 }
