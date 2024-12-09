@@ -188,6 +188,7 @@ class MatrixHttpApi {
         }
 
         return $this->send('POST', '/register', $content, ['kind' => $kind]);
+
     }
 
     /**
@@ -1509,8 +1510,93 @@ class MatrixHttpApi {
             'admin' => true,
         ];
         $path = sprintf("/users/%s/admin", urlencode($userId));
-        return $this->send('PUT', $path, $params, [], "/_synapse/admin/v1");
+        return $this->send('PUT', $path, $params, [], [], "/_synapse/admin/v1");
     }
 
-    
+    /**
+     * get a list of users in the system
+     *
+     * @param  string  $searchTerm
+     * @param  int     $limit
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function getUserDirectory( string $searchTerm, int $limit = 10): array {
+        $path = "/user_directory/search";
+        $params = [
+            'limit' => $limit,
+            'search_term' => $searchTerm,
+        ];
+        return $this->send('POST', $path, $params, [], [], "/_matrix/client/v3");
+    }
+
+    /**
+     * register a user using the admin api https://matrix-org.github.io/synapse/latest/admin_api/register_api.html#shared-secret-registration
+     *
+     * @param  string       $userId
+     * @param  string       $password
+     * @param  string|null  $dsplayname
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function adminRegisterUser( string $userId, string $password, ?string $dsplayname ): array {
+        $path = '/register';
+        $result = $this->send('GET', $path, [], [], [], "/_synapse/admin/v1");
+        $nonce = $result["nonce"];
+
+        if( preg_match('/^@(.*):/', $userId, $matches) ) {
+            $userId = $matches[1];
+        }
+        $admin = 'notadmin';
+        $hmacstring = sprintf("%s\0%s\0%s\0%s", $nonce, $userId, $password, $admin);
+
+        $hmac = hash_hmac('sha1', $hmacstring, env('MATRIX_SHARED_SECRET'));
+        $data = [
+            'nonce' => $nonce,
+            "username" => $userId,
+            "password" => $password,
+            "mac" => $hmac,
+        ];
+        if( !empty($dsplayname) ) {
+            $data["displayname"] = $dsplayname;
+        }
+
+        return $this->send('POST', $path, $data, [], [], "/_synapse/admin/v1");
+
+    }
+
+    /**
+     * get User from the admin api https://matrix-org.github.io/synapse/latest/admin_api/user_admin_api.html#query-user-account
+     * 
+     * @param  string  $userId
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function adminGetUser( string $userId ): array
+    {
+        $path = sprintf("/users/%s", urlencode($userId));
+        return $this->send('GET', $path, [], [], [], "/_synapse/admin/v2");
+    }
+
+    /**
+     * set User from the admin api https://matrix-org.github.io/synapse/latest/admin_api/user_admin_api.html#create-or-modify-account
+     *
+     * @param  string  $userId
+     * @param  array   $params
+     * @return array
+     * @throws MatrixException
+     * @throws MatrixHttpLibException
+     * @throws MatrixRequestException
+     */
+    public function adminSetUser( string $userId, array $params ): array
+    {
+        $path = "/users/{$userId}";
+        return $this->send('PUT', $path, $params, [], [], "/_synapse/admin/v2");
+    }
 }
