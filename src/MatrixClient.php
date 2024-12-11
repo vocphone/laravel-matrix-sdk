@@ -127,11 +127,11 @@ class MatrixClient {
         $doSync = true;
 
         if( !$token  ) {
-            if( Cache::has("LARAVEL_MATRIX_TOKEN") && Cache::get("LARAVEL_MATRIX_USER") == env("MATRIX_USERNAME") ) {
+            if( Cache::has("LARAVEL_MATRIX_TOKEN") && Cache::get("LARAVEL_MATRIX_USERNAME") == env("MATRIX_USERNAME") ) {
                 $useToken = Cache::get("LARAVEL_MATRIX_TOKEN");
             } else {
                 $this->setApi($baseUrl, $token, $validCertCheck);
-                $useToken = $this->login();
+                $useToken = $this->login(null, null, false );
             }
 
             $doSync = false;
